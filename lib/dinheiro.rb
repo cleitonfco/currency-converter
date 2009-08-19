@@ -1,67 +1,88 @@
+require 'rubygems'
+require 'open-uri'
+require 'hpricot'
+require 'bigdecimal'
+
 class Dinheiro
 
-  attr_reader :valor, :moeda_base
+  attr_reader :quantia, :moeda_base
+
   CONFIGURACAO_MOEDAS = {
-    'USD' => { :nome => 'dólar americano', :prefixo => '$ ',  :separador_decimal => '.', :separador_milhar => ',' },
-    'EUR' => { :nome => 'euro',            :prefixo => '€ ',  :separador_decimal => ',', :separador_milhar => '.' },
-    'BRL' => { :nome => 'real',            :prefixo => 'R$ ', :separador_decimal => ',', :separador_milhar => '.' }
+    'USD' => { :nome => 'dólar americano', :prefixo => 'US$ ',  :separador_decimal => '.', :separador_milhar => ',' },
+    'EUR' => { :nome => 'euro',            :prefixo => '€ ',    :separador_decimal => ',', :separador_milhar => '.' },
+    'JPY' => { :nome => 'yen',             :prefixo => '¥ ',    :separador_decimal => ',', :separador_milhar => '.' },
+    'BRL' => { :nome => 'real',            :prefixo => 'R$ ',   :separador_decimal => ',', :separador_milhar => '.' }
   }
-  COTACOES = {'USD' => 1.4101, 'BRL' => 2.6281, 'EUR' => 1 }
+  URL_COTACOES = 'http://www.ecb.int/stats/eurofxref/eurofxref-daily.xml'
   MOEDA_REFERENCIA = 'EUR'
 
-  def initialize(valor = 0, moeda_base = 'EUR')
-    @valor = (valor * 100).to_i / 100.0
+  def initialize(quantia = 0, moeda_base = 'EUR')
+    @quantia = BigDecimal.new(quantia.to_s)
     @moeda_base = moeda_base
+    @@cotacoes = { 'EUR' => 1.0 }
+    rates.search('cube/cube/cube').each do |nodes|
+      @@cotacoes[nodes.attributes['currency']] = nodes.attributes['rate'].to_f
+    end
   end
 
   def para(moeda_destino)
-    return @valor * COTACOES[moeda_destino] if @moeda_base == MOEDA_REFERENCIA
+    return Dinheiro.new(@quantia * cotacoes[moeda_destino], moeda_destino) if @moeda_base == MOEDA_REFERENCIA
     if moeda_destino == MOEDA_REFERENCIA
-      @valor / COTACOES[@moeda_base]
+      Dinheiro.new(@quantia / cotacoes[@moeda_base], moeda_destino)
     else
-      @valor / COTACOES[@moeda_base] * COTACOES[moeda_destino]
+      Dinheiro.new(@quantia / cotacoes[@moeda_base] * cotacoes[moeda_destino], moeda_destino)
     end
   end
+
+  def rates
+    date = Time.now.strftime("%Y-%m-%d")
+    local_filename = "source/cotacao_#{date}.xml"
+    if !File.exists?(local_filename)
+      open(URL_COTACOES) { |content| File.open(local_filename, 'w') { |f| f.write(content.read) } }
+    end
+    doc = Hpricot(open(local_filename))
+  end
+
+  def valor
+    ("%.2f" % @quantia).to_f
+  end
+
+  def cotacoes
+    @@cotacoes
+  end
+
+  [['real', 'BRL'], ['dolar', 'USD'], ['euro', 'EUR'], ['yen', 'JPY']].each do |moeda|
+    define_method("to_#{moeda[0]}") { eval "para('#{moeda[1]}')" }
+  end
+
+  alias_method :to_dolares, :to_dolar
+  alias_method :em_dolar,   :to_dolar
+  alias_method :em_dolares, :to_dolar
+  alias_method :to_reais,   :to_real
+  alias_method :em_real,    :to_real
+  alias_method :em_reais,   :to_real
+  alias_method :to_euros,   :to_euro
+  alias_method :em_euro,    :to_euro
+  alias_method :em_euros,   :to_euro
 
   def formatado
     "#{CONFIGURACAO_MOEDAS[@moeda_base][:prefixo]}#{to_s}"
   end
 
   def to_s
-    separadores = (inteiro.to_s.length / 3.0).ceil - 1
-    saldo = inteiro.to_s.length % 3
-    re = '^([+-]?)'
-    re << '(\d{' + saldo.to_s + '})' if saldo > 0
-    re << '(\d{3})' * separadores
-    re << '$'
-    rex = Regexp.new(re)
-
-#http://finance.yahoo.com/webservice/v1/symbols/allcurrencies/quote;date=20090814;currency=true?view=basic&format=json
-#    puts rex.source
-#    puts CONFIGURACAO_MOEDAS[@moeda_base][:separador_decimal]
-    valor = inteiro.to_s.gsub(rex, "#{$1}#{$2},#{$3}")
-    valor + CONFIGURACAO_MOEDAS[@moeda_base][:separador_decimal] + decimal.to_s
-#    valor = @valor.to_s.gsub(".", CONFIGURACAO_MOEDAS[:separador_decimal])
-#    if /^([+-]?)(\d)$/ =~
-#      return "#{$1}0#{CONFIGURACAO_MOEDAS[:separador_decimal]}0#{$2}"
-#    end
-#    /^([+-]?)(\d*)(\d\d)$/ =~ quantia.to_s
-#    "#{$1}#{$2.to_i}.#{$3}"
-#    return inteiro if quantidade_de_passos(inteiro) == 0
-#    resultado = ""
-#    quantidade_de_passos(inteiro).times do |passo|
-#      resultado = "." + inteiro[-QUANTIDADE_DIGITOS + passo * -QUANTIDADE_DIGITOS, QUANTIDADE_DIGITOS] + resultado
-#    end
-#    resultado = inteiro[0, digitos_que_sobraram(inteiro)] + resultado
-#    resultado.gsub(/^(-?)\./, '\1')
+    zeros = inteiro > 0 ? "0" * (3 - inteiro.to_s.length % 3) : "0" * (3 - inteiro.abs.to_s.length % 3)
+    valor = inteiro.to_s.sub(/([+-]?)(\d+)/, '\1' + zeros + '\2').
+                gsub(/(\d{3})/, CONFIGURACAO_MOEDAS[@moeda_base][:separador_milhar] + '\1').
+                gsub(/^([+-]?)[.,0]*/, '\1')
+    valor + CONFIGURACAO_MOEDAS[@moeda_base][:separador_decimal] + decimal
   end
 
   private
     def inteiro
-      @valor.to_i
+      @quantia.to_i
     end
     
     def decimal
-      ((@valor - inteiro) * 100).to_i
+      ("%.2f" % @quantia).split(".")[1]
     end
 end
