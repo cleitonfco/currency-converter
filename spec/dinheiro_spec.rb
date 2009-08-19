@@ -25,6 +25,7 @@ describe Dinheiro do
     end
 
     it "to_s deve estar de acordo com o padrão da moeda" do
+      Dinheiro.new(0, 'BRL').to_s.should == "0,00"
       Dinheiro.new(1234567.89, "BRL").to_s.should == "1.234.567,89"
       Dinheiro.new(-15935.7416, "BRL").to_s.should == "-15.935,74"
       Dinheiro.new('987654.321', "BRL").to_s.should == "987.654,32"
@@ -51,6 +52,7 @@ describe Dinheiro do
     end
 
     it "to_s deve estar de acordo com o padrão da moeda" do
+      Dinheiro.new(0, 'USD').to_s.should == "0.00"
       Dinheiro.new(1234567.89, "USD").to_s.should == "1,234,567.89"
       Dinheiro.new(-15935.7416, "USD").to_s.should == "-15,935.74"
       Dinheiro.new(987654.321, "USD").to_s.should == "987,654.32"
@@ -74,6 +76,10 @@ describe Dinheiro do
 
     it "formatado deve retornar o formato correto da moeda" do
       @dinheiro.formatado.should == "€ 8.177,90"
+    end
+
+    it "to_s deve estar de acordo com o padrão da moeda" do
+      Dinheiro.new.to_s.should == "0,00"
     end
   end
 end

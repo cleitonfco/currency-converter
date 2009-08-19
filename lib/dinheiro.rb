@@ -7,11 +7,12 @@ class Dinheiro
 
   attr_reader :quantia, :moeda_base
 
-  CONFIGURACAO_MOEDAS = {
-    'USD' => { :nome => 'dólar americano', :prefixo => 'US$ ',  :separador_decimal => '.', :separador_milhar => ',' },
-    'EUR' => { :nome => 'euro',            :prefixo => '€ ',    :separador_decimal => ',', :separador_milhar => '.' },
-    'JPY' => { :nome => 'yen',             :prefixo => '¥ ',    :separador_decimal => ',', :separador_milhar => '.' },
-    'BRL' => { :nome => 'real',            :prefixo => 'R$ ',   :separador_decimal => ',', :separador_milhar => '.' }
+  MOEDAS = {
+    'USD' => { :nome => 'Dólar americano', :method => 'dolar', :prefixo => 'US$ ',  :separador_decimal => '.', :separador_milhar => ',' },
+    'EUR' => { :nome => 'Euro',            :method => 'euro',  :prefixo => '€ ',    :separador_decimal => ',', :separador_milhar => '.' },
+    'JPY' => { :nome => 'Yen',             :method => 'yen',   :prefixo => '¥ ',    :separador_decimal => ',', :separador_milhar => '.' },
+    'GBP' => { :nome => 'Libra esterlina', :method => 'libra', :prefixo => '£ ',    :separador_decimal => '.', :separador_milhar => ',' },
+    'BRL' => { :nome => 'Real',            :method => 'real',  :prefixo => 'R$ ',   :separador_decimal => ',', :separador_milhar => '.' }
   }
   URL_COTACOES = 'http://www.ecb.int/stats/eurofxref/eurofxref-daily.xml'
   MOEDA_REFERENCIA = 'EUR'
@@ -51,30 +52,22 @@ class Dinheiro
     @@cotacoes
   end
 
-  [['real', 'BRL'], ['dolar', 'USD'], ['euro', 'EUR'], ['yen', 'JPY']].each do |moeda|
-    define_method("to_#{moeda[0]}") { eval "para('#{moeda[1]}')" }
+  MOEDAS.each_pair do |key, value|
+    define_method("to_#{value[:method]}") { eval "para('#{key}')" }
+    alias_method "em_#{value[:method]}".to_sym, "to_#{value[:method]}".to_sym
   end
 
-  alias_method :to_dolares, :to_dolar
-  alias_method :em_dolar,   :to_dolar
-  alias_method :em_dolares, :to_dolar
-  alias_method :to_reais,   :to_real
-  alias_method :em_real,    :to_real
-  alias_method :em_reais,   :to_real
-  alias_method :to_euros,   :to_euro
-  alias_method :em_euro,    :to_euro
-  alias_method :em_euros,   :to_euro
-
   def formatado
-    "#{CONFIGURACAO_MOEDAS[@moeda_base][:prefixo]}#{to_s}"
+    "#{MOEDAS[@moeda_base][:prefixo]}#{to_s}"
   end
 
   def to_s
+    return "0#{MOEDAS[@moeda_base][:separador_decimal]}00" if @quantia.zero?
     zeros = inteiro > 0 ? "0" * (3 - inteiro.to_s.length % 3) : "0" * (3 - inteiro.abs.to_s.length % 3)
     valor = inteiro.to_s.sub(/([+-]?)(\d+)/, '\1' + zeros + '\2').
-                gsub(/(\d{3})/, CONFIGURACAO_MOEDAS[@moeda_base][:separador_milhar] + '\1').
+                gsub(/(\d{3})/, MOEDAS[@moeda_base][:separador_milhar] + '\1').
                 gsub(/^([+-]?)[.,0]*/, '\1')
-    valor + CONFIGURACAO_MOEDAS[@moeda_base][:separador_decimal] + decimal
+    valor + MOEDAS[@moeda_base][:separador_decimal] + decimal
   end
 
   private

@@ -1,8 +1,9 @@
 require 'lib/dinheiro'
 
 module ComoDinheiro
-  [['real', 'BRL'], ['dolar', 'USD'], ['euro', 'EUR'], ['yen', 'JPY']].each do |moeda|
-    define_method(moeda[0]) { eval "Dinheiro.new(self, '#{moeda[1]}')" }
+
+  Dinheiro::MOEDAS.each_pair do |key, value|
+    define_method(value[:method]) { eval "Dinheiro.new(self, '#{key}')" }
   end
   
   alias_method :dolares, :dolar
@@ -11,5 +12,17 @@ module ComoDinheiro
   alias_method :yens,    :yen
 end
 
+module ComoDinheiroNil
+  Dinheiro::MOEDAS.each_pair do |key, value|
+    define_method(value[:method]) { eval "0.#{value[:method]}" }
+  end
+
+  alias_method :dolares, :dolar
+  alias_method :euros,   :euro 
+  alias_method :reais,   :real
+  alias_method :yens,    :yen
+end
+
 Numeric.send(:include, ComoDinheiro)
 String.send(:include, ComoDinheiro)
+NilClass.send(:include, ComoDinheiroNil)
