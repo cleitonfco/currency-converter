@@ -16,7 +16,7 @@ class Converter
     unless @moeda_base == 'EUR'
       valor = converter_de("EUR")
     end
-    puts valor
+#    puts valor
     valor * COTACAO[moeda_destino]
   end
   

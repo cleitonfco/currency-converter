@@ -33,19 +33,19 @@ describe 'converter' do
     end
   end
 
-  it "deve converter qualquer coisa em qualquer coisa" do
-    pending
+#  it "deve converter qualquer coisa em qualquer coisa" do
+#    pending
   #  [1, 10, 25, 32.17, 99.99].each do |valor|
   #    dinheiro = Converter.new(valor, "USD")
   #    dinheiro.converter_para('EUR').should ==  @cotacao["EUR"] / valor
   #  end
-  end
+#  end
   
-  it "deve converter Real em Dólares" do
-    valor = 10
-    dinheiro = Converter.new(valor, "BRL")
-    dinheiro.converter_para('USD').should == 5.38
-  end
+#  it "deve converter Real em Dólares" do
+#    valor = 10
+#    dinheiro = Converter.new(valor, "BRL")
+#    dinheiro.converter_para('USD').should == 5.38
+#  end
 
 
 end
