@@ -22,14 +22,15 @@ module Currency
       define_method("to_#{value[:method]}") { eval "convert('#{key}')" }
     end
 
-    def doc
-      date = Time.now.strftime("%Y-%m-%d")
-      local_filename = "source/cotacao_#{date}.xml"
-      if !File.exists?(local_filename)
-        open(RATES_URL) { |content| File.open(local_filename, 'w') { |f| f.write(content.read) } }
+    private
+      def doc
+        date = Time.now.strftime("%Y-%m-%d")
+        local_filename = "source/cotacao_#{date}.xml"
+        if !File.exists?(local_filename)
+          open(RATES_URL) { |content| File.open(local_filename, 'w') { |f| f.write(content.read) } }
+        end
+        Hpricot(open(local_filename))
       end
-      Hpricot(open(local_filename))
-    end
 
   end
 end  
